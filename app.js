@@ -1,4 +1,4 @@
-require('dotenv').config();
+const config = require('./utils/config');
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -7,10 +7,10 @@ const Blog = require('./models/blog');
 const blogsRouter = require('./controllers/blogs');
 const logger = require('./utils/loggers');
 const middleware = require('./utils/middleware');
+require('express-async-errors');
 
-const mongoUrl = process.env.MONGO_URI;
 mongoose
-  .connect(mongoUrl, {
+  .connect(config.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     useFindAndModify: false,
