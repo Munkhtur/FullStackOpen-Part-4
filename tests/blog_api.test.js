@@ -4,9 +4,17 @@ const app = require('../app');
 const api = supertest(app);
 const Blog = require('../models/blog');
 const helper = require('./test_helper');
+const User = require('../models/user');
+const bcrypt = require('bcryptjs');
+let token;
 
 beforeEach(async () => {
   await Blog.deleteMany({});
+  await User.deleteMany({});
+
+  const passwordHash = await bcrypt.hash('sekret', 10);
+  const user = new User({ username: 'root', name: 'rooot', passwordHash });
+  await user.save();
 
   const blogObjects = helper.initialBlogs.map((blog) => new Blog(blog));
   const promiseArray = blogObjects.map((blog) => blog.save());
@@ -35,6 +43,12 @@ describe('get and create', () => {
   });
 
   test('a valid blog can be added', async () => {
+    const result = await api
+      .post('/api/login')
+      .send({ username: 'root', password: 'sekret' });
+    token = result.body.token;
+    console.log(result.body.token);
+
     const newBlog = {
       title: 'async/await simplifies making async calls',
       author: 'Third author',
@@ -44,6 +58,7 @@ describe('get and create', () => {
 
     await api
       .post('/api/blogs')
+      .set('Authorization', `bearer ${token}`)
       .send(newBlog)
       .expect(200)
       .expect('Content-Type', /application\/json/);
@@ -63,6 +78,11 @@ describe('get and create', () => {
   });
 
   test('like missing is 0', async () => {
+    const result = await api
+      .post('/api/login')
+      .send({ username: 'root', password: 'sekret' });
+    token = result.body.token;
+
     const newBlog = {
       title: 'async/await simplifies making async calls',
       author: 'author likes 0',
@@ -72,6 +92,7 @@ describe('get and create', () => {
     await api
       .post('/api/blogs')
       .send(newBlog)
+      .set('Authorization', `Bearer ${token}`)
       .expect(200)
       .expect('Content-Type', /application\/json/);
 
@@ -84,24 +105,70 @@ describe('get and create', () => {
   });
 
   test('title missing', async () => {
+    const result = await api
+      .post('/api/login')
+      .send({ username: 'root', password: 'sekret' });
+    token = result.body.token;
+
     const newBlog = {
       author: 'author likes 0',
       url: 'likes missoing',
     };
 
-    await api.post('/api/blogs').send(newBlog).expect(400);
+    await api
+      .post('/api/blogs')
+      .set('Authorization', `Bearer ${token}`)
+      .send(newBlog)
+      .expect(400);
+  });
+  test('unauthorized blog', async () => {
+    const result = await api
+      .post('/api/login')
+      .send({ username: 'notroot', password: 'sekret' });
+    token = 'notvalidtoken';
+
+    const newBlog = {
+      title: 'async/await simplifies making async calls',
+      author: 'author likes 0',
+      url: 'likes missoing',
+    };
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(401);
   });
 });
 
 describe('delete method', () => {
   test('delete valid', async () => {
     const blogsAtStart = await helper.blogInDb();
-    const blogToDelete = blogsAtStart[0];
+    const result = await api
+      .post('/api/login')
+      .send({ username: 'root', password: 'sekret' });
+    token = result.body.token;
 
-    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204);
+    const newBlog = {
+      title: 'async/await simplifies making async calls',
+      author: 'author likes 0',
+      url: 'likes missoing',
+    };
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .set('Authorization', `Bearer ${token}`);
+
+    const blogToDelete = blogsAtStart[2];
+
+    await api
+      .delete(`/api/blogs/${blogToDelete.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
 
     const blogsAtEnd = await helper.blogInDb();
-    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length - 1);
+    expect(blogsAtEnd).toHaveLength(helper.initialBlogs.length);
 
     const titles = blogsAtEnd.map((t) => t.title);
     expect(titles).not.toContain(blogToDelete.title);

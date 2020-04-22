@@ -1,9 +1,10 @@
 POST http://localhost:3003/api/blogs
 Content-Type: application/json
+Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNlY29uZCB1c2VyIiwiaWQiOiI1ZTllYWJhZGI1NjA5YjBjODhmZjFkMzMiLCJpYXQiOjE1ODc0NjkyNjJ9.O4BiFQa-9ZKr2Ejxlsuwwauu95hxbPS8eq9x_UjPhQ4
 
 {
-    "title" : "two",
-    "author": "someone else",
+    "title" : "post to delte",
+    "author": "ssadfoirf author",
     "url": "some@sfe.com",
     "likes": 2
 }
